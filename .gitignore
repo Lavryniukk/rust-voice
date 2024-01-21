@@ -1,0 +1,10 @@
+# Ignore compiled output
+/target/
+
+# Ignore IDE files
+/.idea/
+/.vscode/
+
+.env
+# Ignore build artifacts
+Cargo.lock
