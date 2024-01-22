@@ -17,6 +17,25 @@ struct Translation {
     text: String,
 }
 
+fn get_output_device() -> (hound::WavSpec, cpal::StreamConfig, cpal::Device) {
+    let host = cpal::default_host();
+    let input_device = host.default_input_device().unwrap();
+    let input_format = input_device.default_input_config().unwrap();
+    let config = cpal::StreamConfig {
+        channels: input_format.channels(),
+        sample_rate: input_format.sample_rate(),
+        buffer_size: cpal::BufferSize::Default,
+    };
+
+    let spec = hound::WavSpec {
+        channels: config.channels as u16,
+        sample_rate: config.sample_rate.0,
+        bits_per_sample: 32,
+        sample_format: hound::SampleFormat::Float,
+    };
+    return (spec, config, input_device);
+}
+
 async fn play_text(text: &String) {
     let openai_key = match env::var("OPENAI_KEY") {
         Ok(key) => key,
@@ -50,25 +69,12 @@ async fn play_text(text: &String) {
 fn main() {
     dotenv().ok();
     let (tx, rx) = mpsc::channel();
-    let host = cpal::default_host();
-    let input_device = host.default_input_device().unwrap();
-    let input_format = input_device.default_input_config().unwrap();
-    let config = cpal::StreamConfig {
-        channels: input_format.channels(),
-        sample_rate: input_format.sample_rate(),
-        buffer_size: cpal::BufferSize::Default,
-    };
-
-    let spec = hound::WavSpec {
-        channels: config.channels as u16,
-        sample_rate: config.sample_rate.0,
-        bits_per_sample: 32,
-        sample_format: hound::SampleFormat::Float,
-    };
+    let (spec, config, input_device) = get_output_device();
 
     let writer = Arc::new(Mutex::new(
         hound::WavWriter::create("src/files/output0.wav", spec).unwrap(),
     ));
+
     let start_time = Arc::new(Mutex::new(Instant::now()));
     let file_count = Arc::new(Mutex::new(0));
 
